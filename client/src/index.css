@@ -1,0 +1,131 @@
+/* E-Ink Theme Integration */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --bs-body-bg: #ffffff;
+  --bs-body-color: #000000;
+  --bs-font-sans-serif: 'Inter', sans-serif;
+  --bs-font-serif: 'Playfair Display', serif;
+  --bs-font-monospace: 'JetBrains Mono', monospace;
+  --bs-primary: #000000;
+  --bs-secondary: #666666;
+  --bs-danger: #000000;
+  /* In E-Ink, danger is usually just bold/black or outlined */
+  --bs-border-width: 2px;
+  --bs-border-color: #000000;
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+  --bs-border-radius-xl: 0;
+}
+
+body {
+  font-family: var(--bs-font-sans-serif);
+  -webkit-font-smoothing: antialiased;
+  background-color: #f4f4f4;
+  /* Light grey paper feel */
+}
+
+/* Custom E-Ink Utilities */
+
+.font-serif {
+  font-family: var(--bs-font-serif) !important;
+}
+
+.font-monospace {
+  font-family: var(--bs-font-monospace) !important;
+}
+
+/* Hard Edges & High Contrast */
+.card {
+  border: 2px solid #000;
+  border-radius: 0;
+  box-shadow: 4px 4px 0px 0px #000;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn {
+  border-radius: 0;
+  border: 2px solid #000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary {
+  background-color: #000;
+  color: #fff;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.5);
+}
+
+.btn-primary:hover {
+  background-color: #333;
+  border-color: #000;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.5);
+}
+
+.btn-outline-dark {
+  box-shadow: 2px 2px 0px 0px #000;
+  background: #fff;
+}
+
+.btn-outline-dark:hover {
+  background: #000;
+  color: #fff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #000;
+}
+
+.form-control {
+  border: 2px solid #000;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
+  font-family: var(--bs-font-monospace);
+}
+
+.form-control:focus {
+  box-shadow: none;
+  background: #fff;
+  border-color: #000;
+  outline: 4px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Typography Overrides */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--bs-font-serif);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.display-1 {
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+/* Utility Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
