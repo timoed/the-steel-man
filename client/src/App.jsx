@@ -241,6 +241,7 @@ import Login from './Login';
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const userId = localStorage.getItem('sm_user_id');
   const [isPro, setIsPro] = useState(false);
   const [isGuest, setIsGuest] = useState(true);
@@ -334,7 +335,7 @@ function App() {
             </h1>
             <nav className="nav">
               <Link to="/history" className="nav-link text-muted px-2 small font-monospace">HISTORY</Link>
-              {userId && !isGuest ? (
+              {userId && !isGuest && location.pathname !== '/login' ? (
                 <>
                   {!isPro && <button onClick={handleUpgrade} className="nav-link text-primary fw-bold px-2 small font-monospace bg-transparent border-0">UPGRADE</button>}
                   <Link to="/account" className="nav-link text-dark px-2 small font-monospace fw-bold">PROFILE</Link>
