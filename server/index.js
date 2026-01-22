@@ -9,33 +9,27 @@ console.log("Starting Server...");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// --- 1. Middleware (Order Critical) ---
-
-// Request Logging (Debug incoming requests on Replit)
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
-    next();
-});
-
-// CORS Configuration
-const corsOptions = {
-    origin: '*', // Allow ALL origins (Vercel, Localhost, etc.)
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'stripe-signature'],
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Explicitly handle OPTIONS preflight
-
+// Middleware
 app.use(express.json({
     verify: (req, res, buf) => {
-        // Keep raw body for Stripe signature verification
         if (req.originalUrl.startsWith('/api/webhook')) {
             req.rawBody = buf.toString();
         }
     }
 }));
+
+// NUCLEAR CORS FIX (Manual Headers)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, stripe-signature');
+
+    // Intercept OPTIONS method
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 
 // --- 2. Environment & connection Setup ---
