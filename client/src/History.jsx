@@ -16,7 +16,7 @@ function History({ onViewDebate, userId, isPro, isGuest, onUpgrade }) {
 
     const handleLockClick = () => {
         if (isGuest) {
-            navigate('/login');
+            navigate('/login?mode=signup');
         } else {
             onUpgrade();
         }

@@ -142,7 +142,7 @@ function Account({ userId, isPro, isGuest, onLogout, onUpgrade }) {
                                 )}
 
                                 {isGuest ? (
-                                    <button onClick={() => navigate('/login')} className="btn btn-outline-dark py-2">
+                                    <button onClick={() => navigate('/login?mode=signup')} className="btn btn-outline-dark py-2">
                                         SIGN UP TO SAVE PROGRESS
                                     </button>
                                 ) : (

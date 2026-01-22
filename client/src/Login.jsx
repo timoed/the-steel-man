@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from './firebase';
 import { API_URL } from './config';
 
 export default function Login() {
+    const location = useLocation();
     const [isLogin, setIsLogin] = useState(true);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('mode') === 'signup') {
+            setIsLogin(false);
+        }
+    }, [location]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
