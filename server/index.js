@@ -13,13 +13,14 @@ console.log("Environment Check:", {
 });
 
 const app = express();
-const port = process.env.PORT || 3001; // Using 3001 to avoid conflict if promptimize is running
+const port = process.env.PORT || 3000; // Replit prefers 3000
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Health Check
+// Health Check (Critical for Replit to know we are alive)
+app.get('/', (req, res) => res.json({ status: 'Online', message: 'The Steel Man Backend is running.' }));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // Database Connection
@@ -28,11 +29,17 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Perplexity Setup
-const openai = new OpenAI({
-    apiKey: process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY,
-    baseURL: 'https://api.perplexity.ai',
-});
+// Perplexity/OpenAI Setup (Safe Init)
+let openai;
+const aiApiKey = process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY;
+if (aiApiKey) {
+    openai = new OpenAI({
+        apiKey: aiApiKey,
+        baseURL: 'https://api.perplexity.ai',
+    });
+} else {
+    console.warn("⚠️ WARNING: No AI API Key found. Analysis features will fail.");
+}
 
 // Stripe & User Helpers
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -172,22 +179,28 @@ app.post('/api/analyze', async (req, res) => {
 
         const [steelManResponse, fallacyResponse] = await Promise.all([
             // 1. The Steel Man
-            openai.chat.completions.create({
-                messages: [
-                    { role: "system", content: "You are 'The Steel Man', a world-class debater and philosopher. Your goal is to represent the opposing view of the user's argument with maximum charity, intellectual rigor, and nuance. \n\nRULES:\n- Do NOT straw man the user. Interpret their argument in its strongest possible form.\n- Do NOT simply summarize. Argue FOR the opposing side.\n- Your tone should be respectful but formidable. You are a worthy adversary.\n- Keep it concise but potent (under 400 words)." },
-                    { role: "user", content: `Here is my argument:\n"${argument}"\n\nGive me your strongest counter-argument.` }
-                ],
-                model: "sonar-pro",
-            }),
+            (async () => {
+                if (!openai) throw new Error("AI Service not configured (Missing API Key)");
+                return openai.chat.completions.create({
+                    messages: [
+                        { role: "system", content: "You are 'The Steel Man', a world-class debater and philosopher. Your goal is to represent the opposing view of the user's argument with maximum charity, intellectual rigor, and nuance. \n\nRULES:\n- Do NOT straw man the user. Interpret their argument in its strongest possible form.\n- Do NOT simply summarize. Argue FOR the opposing side.\n- Your tone should be respectful but formidable. You are a worthy adversary.\n- Keep it concise but potent (under 400 words)." },
+                        { role: "user", content: `Here is my argument:\n"${argument}"\n\nGive me your strongest counter-argument.` }
+                    ],
+                    model: "sonar-pro",
+                });
+            })(),
 
             // 2. The Referee
-            openai.chat.completions.create({
-                messages: [
-                    { role: "system", content: "You are a Logic Referee. Analyze the user's text for logical errors effectively. Return ONLY a valid JSON object with two keys: 'score' (0-100 integer representing logical strength) and 'fallacies' (an array of objects with 'type', 'quote', and 'explanation').\n\nExample JSON:\n{\n  \"score\": 65,\n  \"fallacies\": [\n    { \"type\": \"Ad Hominem\", \"quote\": \"because you're stupid\", \"explanation\": \"Attacking the person instead of the argument.\" }\n  ]\n}\n\nIf no fallacies are found, return empty array." },
-                    { role: "user", content: `Analyze the logic of this argument:\n"${argument}"` }
-                ],
-                model: "sonar-pro",
-            })
+            (async () => {
+                if (!openai) return { choices: [{ message: { content: JSON.stringify({ score: 0, fallacies: [] }) } }] };
+                return openai.chat.completions.create({
+                    messages: [
+                        { role: "system", content: "You are a Logic Referee. Analyze the user's text for logical errors effectively. Return ONLY a valid JSON object with two keys: 'score' (0-100 integer representing logical strength) and 'fallacies' (an array of objects with 'type', 'quote', and 'explanation').\n\nExample JSON:\n{\n  \"score\": 65,\n  \"fallacies\": [\n    { \"type\": \"Ad Hominem\", \"quote\": \"because you're stupid\", \"explanation\": \"Attacking the person instead of the argument.\" }\n  ]\n}\n\nIf no fallacies are found, return empty array." },
+                        { role: "user", content: `Analyze the logic of this argument:\n"${argument}"` }
+                    ],
+                    model: "sonar-pro",
+                });
+            })()
         ]);
 
         const steelManText = steelManResponse.choices[0].message.content;
