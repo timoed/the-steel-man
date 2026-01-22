@@ -124,8 +124,8 @@ function History({ onViewDebate, userId, isPro, isGuest, onUpgrade }) {
                                             {new Date(debate.created_at).toLocaleDateString()}
                                             {debate.attachment_url && <i className="bi bi-paperclip ms-2 text-dark" title="Has attachment"></i>}
                                         </div>
-                                        {/* Dropdown Menu */}
-                                        {!isLocked && (
+                                        {/* Dropdown Menu - Hide for Guests */}
+                                        {!isLocked && !isGuest && (
                                             <div className="dropdown">
                                                 <button
                                                     className="btn btn-link text-dark p-0 border-0 shadow-none"
