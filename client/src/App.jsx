@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import History from './History';
 import ShareView from './ShareView';
@@ -245,26 +245,21 @@ function App() {
   const [isPro, setIsPro] = useState(false);
   const [isGuest, setIsGuest] = useState(true);
 
-  useEffect(() => {
-    let currentUserId = localStorage.getItem('sm_user_id');
-    if (!currentUserId) {
-      currentUserId = crypto.randomUUID();
-      localStorage.setItem('sm_user_id', currentUserId);
-      window.location.reload();
-    }
-
-    // Check for success URL params
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true' && params.get('session_id')) {
-      verifySubscription(params.get('session_id'));
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-      checkProStatus();
+  const checkProStatus = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${API_URL}/api/me`, {
+        headers: { 'x-user-id': userId }
+      });
+      const data = await res.json();
+      setIsPro(data.is_pro);
+      setIsGuest(data.is_guest);
+    } catch (error) {
+      console.error("Failed to check status", error);
     }
   }, [userId]);
 
-  const verifySubscription = async (sessionId) => {
+  const verifySubscription = useCallback(async (sessionId) => {
     try {
       const res = await fetch(`${API_URL}/api/verify-session`, {
         method: 'POST',
@@ -274,28 +269,37 @@ function App() {
       const data = await res.json();
       if (data.success) {
         setIsPro(true);
-        setIsGuest(false); // If they paid, they are definitely not a guest in the 'free' sense, but let's stick to API
-        checkProStatus(); // Refresh full status
+        setIsGuest(false);
         alert("Upgrade Successful! Welcome to the Chamber.");
       }
-    } catch (e) {
-      console.error("Verification failed", e);
+    } catch (error) {
+      console.error("Verification failed", error);
     }
-  };
+  }, []);
 
-  const checkProStatus = async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(`${API_URL}/api/me`, {
-        headers: { 'x-user-id': userId }
-      });
-      const data = await res.json();
-      setIsPro(data.is_pro);
-      setIsGuest(data.is_guest);
-    } catch (e) {
-      console.error("Failed to check status", e);
+  useEffect(() => {
+    let currentUserId = localStorage.getItem('sm_user_id');
+    if (!currentUserId) {
+      currentUserId = crypto.randomUUID();
+      localStorage.setItem('sm_user_id', currentUserId);
+      window.location.reload();
+      return;
     }
-  };
+
+    // Check for success URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true' && params.get('session_id')) {
+      setTimeout(() => {
+        verifySubscription(params.get('session_id'));
+      }, 0);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      setTimeout(() => {
+        checkProStatus();
+      }, 0);
+    }
+  }, [checkProStatus, verifySubscription]);
 
   const handleUpgrade = async () => {
     if (!userId) return navigate('/login');
@@ -308,7 +312,7 @@ function App() {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-    } catch (e) {
+    } catch {
       alert("Upgrade failed. Please try again.");
     }
   };
