@@ -77,7 +77,7 @@ const getOrCreateUser = async (userId) => {
                 'INSERT INTO users (id, email, firebase_uid, subscription_tier) VALUES ($1, $2, $3, $4)',
                 [userId, anonEmail, userId, 'free']
             );
-            return { id: userId, subscription_tier: 'free' };
+            return { id: userId, email: anonEmail, subscription_tier: 'free' };
         }
         return res.rows[0];
     } catch (e) {
