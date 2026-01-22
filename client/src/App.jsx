@@ -3,6 +3,7 @@ import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import History from './History';
 import ShareView from './ShareView';
 import Account from './Account';
+import { API_URL } from './config';
 
 function Arena({ userId }) {
   const [argument, setArgument] = useState('');
@@ -56,7 +57,7 @@ function Arena({ userId }) {
         attachmentUrl = await getDownloadURL(storageRef);
       }
 
-      const response = await fetch('http://localhost:3001/api/analyze', {
+      const response = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,7 +266,7 @@ function App() {
 
   const verifySubscription = async (sessionId) => {
     try {
-      const res = await fetch('http://localhost:3001/api/verify-session', {
+      const res = await fetch(`${API_URL}/api/verify-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId })
@@ -285,7 +286,7 @@ function App() {
   const checkProStatus = async () => {
     if (!userId) return;
     try {
-      const res = await fetch('http://localhost:3001/api/me', {
+      const res = await fetch(`${API_URL}/api/me`, {
         headers: { 'x-user-id': userId }
       });
       const data = await res.json();
@@ -300,7 +301,7 @@ function App() {
     if (!userId) return navigate('/login');
 
     try {
-      const res = await fetch('http://localhost:3001/api/create-checkout-session', {
+      const res = await fetch(`${API_URL}/api/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { API_URL } from './config';
 
 function ShareView() {
     const { id } = useParams();
@@ -8,7 +9,7 @@ function ShareView() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetch(`http://localhost:3001/api/debates/${id}`)
+        fetch(`${API_URL}/api/debates/${id}`)
             .then(res => {
                 if (!res.ok) throw new Error("Debate not found");
                 return res.json();

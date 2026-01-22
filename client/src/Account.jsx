@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, storage } from './firebase'; // Ensure storage is exported from firebase.js
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { API_URL } from './config';
 
 function Account({ userId, isPro, onLogout, onUpgrade }) {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ function Account({ userId, isPro, onLogout, onUpgrade }) {
     const fetchProfile = async () => {
         if (!userId) return;
         try {
-            const res = await fetch('http://localhost:3001/api/me', {
+            const res = await fetch(`${API_URL}/api/me`, {
                 headers: { 'x-user-id': userId }
             });
             const data = await res.json();
@@ -57,7 +58,7 @@ function Account({ userId, isPro, onLogout, onUpgrade }) {
 
     const updateBackend = async (updates) => {
         try {
-            await fetch('http://localhost:3001/api/users/me', {
+            await fetch(`${API_URL}/api/users/me`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

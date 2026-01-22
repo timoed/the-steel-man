@@ -4,6 +4,14 @@ const { Pool } = require('pg');
 const OpenAI = require('openai');
 require('dotenv').config();
 
+console.log("Starting Server...");
+console.log("Environment Check:", {
+    PORT: process.env.PORT,
+    DB_URL: !!process.env.DATABASE_URL,
+    STRIPE: !!process.env.STRIPE_SECRET_KEY,
+    OPENAI: !!process.env.PERPLEXITY_API_KEY || !!process.env.OPENAI_API_KEY
+});
+
 const app = express();
 const port = process.env.PORT || 3001; // Using 3001 to avoid conflict if promptimize is running
 
@@ -338,6 +346,12 @@ app.put('/api/debates/:id', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+    });
+}
+
+// Export for Vercel
+module.exports = app;

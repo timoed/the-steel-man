@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { auth } from './firebase';
+import { API_URL } from './config';
 
 export default function Login() {
     const [isLogin, setIsLogin] = useState(true);
@@ -25,7 +26,7 @@ export default function Login() {
             }
 
             // Sync with our backend to get the UUID
-            const res = await fetch('http://localhost:3001/api/auth/login', {
+            const res = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

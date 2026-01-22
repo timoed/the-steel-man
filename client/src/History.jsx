@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_URL } from './config';
 
 function History({ onViewDebate, userId, isPro, onUpgrade }) {
     const [debates, setDebates] = useState([]);
@@ -11,7 +12,7 @@ function History({ onViewDebate, userId, isPro, onUpgrade }) {
     }, [userId]);
 
     const fetchHistory = () => {
-        fetch('http://localhost:3001/api/debates', {
+        fetch(`${API_URL}/api/debates`, {
             headers: { 'x-user-id': userId }
         })
             .then(res => {
@@ -34,7 +35,7 @@ function History({ onViewDebate, userId, isPro, onUpgrade }) {
         if (!window.confirm("Are you sure you want to delete this record?")) return;
 
         try {
-            const res = await fetch(`http://localhost:3001/api/debates/${id}`, {
+            const res = await fetch(`${API_URL}/api/debates/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-user-id': userId }
             });
@@ -128,7 +129,7 @@ function History({ onViewDebate, userId, isPro, onUpgrade }) {
                                                                 const newTitle = prompt("Enter new title:", debate.title || "Debate " + debate.id.substring(0, 6));
                                                                 if (newTitle) {
                                                                     try {
-                                                                        await fetch(`http://localhost:3001/api/debates/${debate.id}`, {
+                                                                        await fetch(`${API_URL}/api/debates/${debate.id}`, {
                                                                             method: 'PUT',
                                                                             headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
                                                                             body: JSON.stringify({ title: newTitle })
