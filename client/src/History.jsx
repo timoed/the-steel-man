@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_URL } from './config';
 
-function History({ onViewDebate, userId, isPro, onUpgrade }) {
+function History({ onViewDebate, userId, isPro, isGuest, onUpgrade }) {
     const [debates, setDebates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [permissionError, setPermissionError] = useState(false);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (!userId) return;
         fetchHistory();
     }, [userId]);
+
+    const handleLockClick = () => {
+        if (isGuest) {
+            navigate('/login');
+        } else {
+            onUpgrade();
+        }
+    };
 
     const fetchHistory = () => {
         fetch(`${API_URL}/api/debates`, {
@@ -91,13 +102,19 @@ function History({ onViewDebate, userId, isPro, onUpgrade }) {
                                 <div
                                     className={`card h-100 position-relative ${isLocked ? 'bg-light' : ''}`}
                                     style={isLocked ? { cursor: 'pointer' } : {}}
-                                    onClick={() => isLocked && onUpgrade()}
+                                    onClick={() => isLocked && handleLockClick()}
                                 >
                                     {isLocked && (
                                         <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75" style={{ zIndex: 10 }}>
-                                            <div className="text-center">
+                                            <div className="text-center p-3">
                                                 <i className="bi bi-lock-fill fs-1 mb-2"></i>
-                                                <div className="fw-bold small">Upgrade to Unlock</div>
+                                                <div className="fw-bold small text-uppercase">
+                                                    {isGuest ? (
+                                                        <>Sign Up / Login<br />and Upgrade to Unlock</>
+                                                    ) : (
+                                                        "Upgrade to Unlock"
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     )}

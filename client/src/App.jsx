@@ -357,7 +357,7 @@ function App() {
       <main className="flex-grow-1 py-5">
         <Routes>
           <Route path="/" element={<Arena userId={userId} />} />
-          <Route path="/history" element={<History onViewDebate={(debate) => navigate('/', { state: { debate } })} userId={userId} isPro={isPro} onUpgrade={handleUpgrade} />} />
+          <Route path="/history" element={<History onViewDebate={(debate) => navigate('/', { state: { debate } })} userId={userId} isPro={isPro} isGuest={isGuest} onUpgrade={handleUpgrade} />} />
           <Route path="/account" element={<Account userId={userId} isPro={isPro} isGuest={isGuest} onLogout={handleLogout} onUpgrade={handleUpgrade} />} />
           <Route path="/share/:id" element={<ShareView />} />
           <Route path="/login" element={<Login />} />
