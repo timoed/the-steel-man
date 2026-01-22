@@ -359,12 +359,10 @@ app.put('/api/debates/:id', async (req, res) => {
     }
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-    });
-}
+// Always listen (required for Replit/Render)
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
 
-// Export for Vercel
+// Export for Vercel (optional, but harmless)
 module.exports = app;
