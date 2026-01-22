@@ -5,32 +5,49 @@ const OpenAI = require('openai');
 require('dotenv').config();
 
 console.log("Starting Server...");
-console.log("Environment Check:", {
-    PORT: process.env.PORT,
-    DB_URL: !!process.env.DATABASE_URL,
-    STRIPE: !!process.env.STRIPE_SECRET_KEY,
-    OPENAI: !!process.env.PERPLEXITY_API_KEY || !!process.env.OPENAI_API_KEY
-});
 
 const app = express();
-const port = process.env.PORT || 3000; // Replit prefers 3000
+const port = process.env.PORT || 3000;
 
-// Middleware
-// Middleware
-app.use(cors({ origin: '*' })); // Allow ALL origins (Fixes CORS issue for Vercel + Localhost)
-app.use(express.json());
+// --- 1. Middleware (Order Critical) ---
 
-// Health Check (Critical for Replit to know we are alive)
-app.get('/', (req, res) => res.json({ status: 'Online', message: 'The Steel Man Backend is running.' }));
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+// Request Logging (Debug incoming requests on Replit)
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+    next();
+});
 
-// Database Connection
+// CORS Configuration
+const corsOptions = {
+    origin: '*', // Allow ALL origins (Vercel, Localhost, etc.)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'stripe-signature'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Explicitly handle OPTIONS preflight
+
+app.use(express.json({
+    verify: (req, res, buf) => {
+        // Keep raw body for Stripe signature verification
+        if (req.originalUrl.startsWith('/api/webhook')) {
+            req.rawBody = buf.toString();
+        }
+    }
+}));
+
+
+// --- 2. Environment & connection Setup ---
+
+// Database
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// Perplexity/OpenAI Setup (Safe Init)
+// OpenAI / Perplexity (Safe Init)
 let openai;
 const aiApiKey = process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY;
 if (aiApiKey) {
@@ -42,17 +59,26 @@ if (aiApiKey) {
     console.warn("⚠️ WARNING: No AI API Key found. Analysis features will fail.");
 }
 
-// Stripe & User Helpers
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Stripe (Safe Init)
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+    try {
+        stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    } catch (e) {
+        console.error("⚠️ Stripe Init Failed:", e.message);
+    }
+} else {
+    console.warn("⚠️ WARNING: STRIPE_SECRET_KEY missing. Payments will fail.");
+}
+
+
+// --- 3. Helpers ---
 
 const getOrCreateUser = async (userId) => {
     if (!userId) return null;
     try {
         let res = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (res.rows.length === 0) {
-            // Create user with simplified data satisfying schema constraints
-            // We use the UUID for firebase_uid to satisfy NOT NULL and UNIQUE
-            // We create a unique dummy email
             const anonEmail = `anon_${userId.substring(0, 8)}@example.com`;
             await pool.query(
                 'INSERT INTO users (id, email, firebase_uid, subscription_tier) VALUES ($1, $2, $3, $4)',
@@ -69,9 +95,12 @@ const getOrCreateUser = async (userId) => {
 
 const isPro = (user) => user && (user.subscription_tier === 'pro' || user.subscription_tier === 'enterprise');
 
-// ...
 
-// --- ROUTES ---
+// --- 4. Routes ---
+
+// Health Check
+app.get('/', (req, res) => res.json({ status: 'Online', message: 'The Steel Man Backend is running.' }));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // Get User Status
 app.get('/api/me', async (req, res) => {
@@ -80,10 +109,10 @@ app.get('/api/me', async (req, res) => {
     res.json({
         is_pro: isPro(user),
         is_guest: user && user.email && user.email.startsWith('anon_'),
-        email: user.email,
-        display_name: user.display_name,
-        photo_url: user.photo_url,
-        subscription_tier: user.subscription_tier
+        email: user ? user.email : null,
+        display_name: user ? user.display_name : null,
+        photo_url: user ? user.photo_url : null,
+        subscription_tier: user ? user.subscription_tier : 'free'
     });
 });
 
@@ -91,11 +120,8 @@ app.get('/api/me', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { firebase_uid, email } = req.body;
     try {
-        // Try finding by firebase_uid
         let result = await pool.query('SELECT * FROM users WHERE firebase_uid = $1', [firebase_uid]);
-
         if (result.rows.length === 0) {
-            // New User via Firebase
             result = await pool.query(
                 'INSERT INTO users (firebase_uid, email, subscription_tier) VALUES ($1, $2, $3) RETURNING *',
                 [firebase_uid, email, 'free']
@@ -110,6 +136,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Create Checkout Session
 app.post('/api/create-checkout-session', async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: "Payments unavailable" });
     const { userId } = req.body;
     const priceId = process.env.VITE_STRIPE_PRICE_PRO_ID || 'price_1SrrVyBP6Gnbkkx3W5NCv7qd';
 
@@ -129,8 +156,9 @@ app.post('/api/create-checkout-session', async (req, res) => {
     }
 });
 
-// Manual Verification Endpoint (for when webhooks fail locally)
+// Manual Verification
 app.post('/api/verify-session', async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: "Payments unavailable" });
     try {
         const { sessionId } = req.body;
         const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -147,12 +175,21 @@ app.post('/api/verify-session', async (req, res) => {
     }
 });
 
-app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+// Webhook
+app.post('/api/webhook', async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: "Payments unavailable" });
     const sig = req.headers['stripe-signature'];
     let event;
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        // Use rawBody buffer if available (requires specific express json setup, but we use strict try/catch)
+        // Note: For simple Replit setup, we rely on the body usually being parsed.
+        // If strict signature verification fails, we just log it for now as this is a prototype.
+        event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
+        // Fallback: If construction fails, assume it's untrusted but log it.
+        // In PROD: Return 400.
+        // For Prototype: We'll try to proceed if body matches structure, or just fail.
+        console.error(`Webhook Error: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
@@ -167,21 +204,18 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
     res.json({ received: true });
 });
 
-
-// Parallel Execution: Run Steel Man and Fallacy Checker simultaneously
+// Analyze
 app.post('/api/analyze', async (req, res) => {
     try {
         const { argument } = req.body;
         const userId = req.headers['x-user-id'];
 
-        // Get User context
         const user = await getOrCreateUser(userId);
         const userIsPro = isPro(user);
 
         const [steelManResponse, fallacyResponse] = await Promise.all([
-            // 1. The Steel Man
             (async () => {
-                if (!openai) throw new Error("AI Service not configured (Missing API Key)");
+                if (!openai) throw new Error("AI Service not configured");
                 return openai.chat.completions.create({
                     messages: [
                         { role: "system", content: "You are 'The Steel Man', a world-class debater and philosopher. Your goal is to represent the opposing view of the user's argument with maximum charity, intellectual rigor, and nuance. \n\nRULES:\n- Do NOT straw man the user. Interpret their argument in its strongest possible form.\n- Do NOT simply summarize. Argue FOR the opposing side.\n- Your tone should be respectful but formidable. You are a worthy adversary.\n- Keep it concise but potent (under 400 words)." },
@@ -190,8 +224,6 @@ app.post('/api/analyze', async (req, res) => {
                     model: "sonar-pro",
                 });
             })(),
-
-            // 2. The Referee
             (async () => {
                 if (!openai) return { choices: [{ message: { content: JSON.stringify({ score: 0, fallacies: [] }) } }] };
                 return openai.chat.completions.create({
@@ -205,8 +237,6 @@ app.post('/api/analyze', async (req, res) => {
         ]);
 
         const steelManText = steelManResponse.choices[0].message.content;
-
-        // Clean JSON
         let fallacyContent = fallacyResponse.choices[0].message.content;
         fallacyContent = fallacyContent.replace(/```json/g, '').replace(/```/g, '').trim();
         let analysisData = {};
@@ -220,8 +250,6 @@ app.post('/api/analyze', async (req, res) => {
         let savedId = null;
         let createdAt = new Date().toISOString();
 
-        // Save to DB (Persistence for History)
-        // We save for everyone so Free users can see their "Last 1" debate.
         const insertQuery = `
             INSERT INTO debates (user_id, argument_text, steel_man_response, fallacies_found, strength_score, attachment_url)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -235,7 +263,7 @@ app.post('/api/analyze', async (req, res) => {
                 steelManText,
                 JSON.stringify(analysisData.fallacies || []),
                 analysisData.score || 0,
-                req.body.attachment_url || null // Fix: Grab attachment from request body
+                req.body.attachment_url || null
             ]);
             savedId = rows[0].id;
             createdAt = rows[0].created_at;
@@ -254,20 +282,16 @@ app.post('/api/analyze', async (req, res) => {
         });
     } catch (err) {
         console.error("Analysis Error:", err);
-        res.status(500).json({ error: "Failed to analyze argument." });
+        res.status(500).json({ error: "Failed to analyze argument. " + err.message });
     }
 });
 
-// Get Single Debate (Public/Shared)
+// Get Debate
 app.get('/api/debates/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query('SELECT * FROM debates WHERE id = $1', [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Debate not found" });
-        }
-
+        if (result.rows.length === 0) return res.status(404).json({ error: "Debate not found" });
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
@@ -275,18 +299,11 @@ app.get('/api/debates/:id', async (req, res) => {
     }
 });
 
-// History Endpoint (User Specific)
+// History
 app.get('/api/debates', async (req, res) => {
     const userId = req.headers['x-user-id'];
     if (!userId) return res.status(401).json({ error: "Missing identity" });
-
-    // Check Pro Status
-    const user = await getOrCreateUser(userId);
-    const isProUser = isPro(user);
-
-    // Limits: Always fetch 50, client handles hiding/locking
     const limit = 50;
-
     try {
         const result = await pool.query('SELECT * FROM debates WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2', [userId, limit]);
         res.json(result.rows);
@@ -296,12 +313,11 @@ app.get('/api/debates', async (req, res) => {
     }
 });
 
-// Update User Profile
+// Update Profile
 app.put('/api/users/me', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { display_name, photo_url } = req.body;
     if (!userId) return res.status(401).json({ error: "Missing identity" });
-
     try {
         await pool.query(
             'UPDATE users SET display_name = COALESCE($1, display_name), photo_url = COALESCE($2, photo_url) WHERE id = $3',
@@ -318,19 +334,11 @@ app.put('/api/users/me', async (req, res) => {
 app.delete('/api/debates/:id', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { id } = req.params;
-
     if (!userId) return res.status(401).json({ error: "Missing identity" });
-
     try {
-        // Verify ownership
         const checkResult = await pool.query('SELECT user_id FROM debates WHERE id = $1', [id]);
-        if (checkResult.rows.length === 0) {
-            return res.status(404).json({ error: "Debate not found" });
-        }
-        if (checkResult.rows[0].user_id !== userId) {
-            return res.status(403).json({ error: "Unauthorized" });
-        }
-
+        if (checkResult.rows.length === 0) return res.status(404).json({ error: "Debate not found" });
+        if (checkResult.rows[0].user_id !== userId) return res.status(403).json({ error: "Unauthorized" });
         await pool.query('DELETE FROM debates WHERE id = $1', [id]);
         res.json({ success: true });
     } catch (err) {
@@ -339,31 +347,38 @@ app.delete('/api/debates/:id', async (req, res) => {
     }
 });
 
-// Update Debate (Rename/Notes)
+// Update Debate
 app.put('/api/debates/:id', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { id } = req.params;
     const { title } = req.body;
-
     if (!userId) return res.status(401).json({ error: "Missing identity" });
-
     try {
         const checkResult = await pool.query('SELECT user_id FROM debates WHERE id = $1', [id]);
         if (checkResult.rows.length === 0) return res.status(404).json({ error: "Debate not found" });
         if (checkResult.rows[0].user_id !== userId) return res.status(403).json({ error: "Unauthorized" });
-
         await pool.query('UPDATE debates SET title = $1 WHERE id = $2', [title, id]);
-        res.json({ success: true, title }); // return title to update frontend state
+        res.json({ success: true, title });
     } catch (err) {
         console.error("Update Debate Error", err);
         res.status(500).json({ error: "Failed to update debate" });
     }
 });
 
-// Always listen (required for Replit/Render)
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+// Unhandled Request Logger & Error Handler
+app.use((req, res, next) => {
+    console.warn(`[404] Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({ error: "Route not found" });
 });
 
-// Export for Vercel (optional, but harmless)
+app.use((err, req, res, next) => {
+    console.error("🔥 GLOBAL SERVER ERROR:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+});
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    console.log(`CORS enabled for ALL origins (*)`);
+});
+
 module.exports = app;
