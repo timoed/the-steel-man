@@ -16,7 +16,11 @@ function ShareView() {
             .then(data => {
                 // Parse fallacies if string
                 if (typeof data.fallacies_found === 'string') {
-                    try { data.fallacies_found = JSON.parse(data.fallacies_found); } catch (e) { data.fallacies_found = []; }
+                    try {
+                        data.fallacies_found = JSON.parse(data.fallacies_found);
+                    } catch {
+                        data.fallacies_found = [];
+                    }
                 }
                 setDebate(data);
                 setLoading(false);
@@ -34,7 +38,7 @@ function ShareView() {
         <div className="container py-5 animate-fade-in">
             {/* Reusing the result layout */}
             <div className="mb-5 text-center">
-                <h1 className="h3 font-serif mb-3">The Steel Man <span className="text-danger">🥊</span></h1>
+                <h1 className="h3 font-serif mb-3">The Steel Man <span className="text-danger"></span></h1>
                 <span className="badge bg-black text-white font-monospace p-2">SHARED DEBATE # {id.slice(0, 8)}</span>
             </div>
 
@@ -80,11 +84,10 @@ function ShareView() {
                     </div>
                 </div>
                 <div className="col-md-6">
-                    <h5 className="border-bottom border-dark pb-3 mb-4 text-uppercase small ls-1 d-flex justify-content-between align-items-center text-dark">
+                    <h4 className="border-bottom border-dark pb-3 mb-4 text-uppercase small ls-1 d-flex justify-content-between align-items-center text-dark">
                         <span>The Steel Man Response</span>
-                        <span className="badge bg-black rounded-0 fw-normal">OPPOSING VIEW</span>
-                    </h5>
-                    <div className="p-4 bg-black text-white border border-dark font-serif fs-5 position-relative shadow-lg">
+                    </h4>
+                    <div className="p-4 bg-black text-white border border-dark font-serif fs-5 position-relative">
                         {debate.steel_man_response}
                     </div>
                 </div>

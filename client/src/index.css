@@ -46,6 +46,12 @@ body {
   transition: transform 0.1s, box-shadow 0.1s;
 }
 
+.hover-shadow:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #000;
+  cursor: pointer;
+}
+
 .btn {
   border-radius: 0;
   border: 2px solid #000;
