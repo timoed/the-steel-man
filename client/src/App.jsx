@@ -336,8 +336,8 @@ function App() {
             <nav className="nav">
               <Link to="/history" className="nav-link text-muted px-2 small font-monospace">HISTORY</Link>
 
-              {/* Show Profile for everyone except on Login page */}
-              {userId && location.pathname !== '/login' && (
+              {/* Show Profile only for Registered Users (Pro or Free), not Guests */}
+              {userId && !isGuest && location.pathname !== '/login' && (
                 <Link to="/account" className="nav-link text-dark px-2 small font-monospace fw-bold">PROFILE</Link>
               )}
 
