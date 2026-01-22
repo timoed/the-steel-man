@@ -89,7 +89,7 @@ function Arena({ userId }) {
       {/* Hero Section */}
       {!result && (
         <div className="text-center mb-5">
-          <h2 className="display-1 mb-4">The Anti-Echo Chamber.</h2>
+          <h2 className="display-1 mb-4">The Anti-Echo Chamber</h2>
           <p className="lead font-monospace text-muted mx-auto" style={{ maxWidth: '700px' }}>
             Test your logic, Expose your fallacies. <br />
           </p>
@@ -278,6 +278,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    console.log("🚀 API Configured:", API_URL); // DEBUG LOG
     let currentUserId = localStorage.getItem('sm_user_id');
     if (!currentUserId) {
       currentUserId = crypto.randomUUID();
