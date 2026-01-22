@@ -200,11 +200,15 @@ app.post('/api/webhook', async (req, res) => {
 // Analyze
 app.post('/api/analyze', async (req, res) => {
     try {
-        const { argument } = req.body;
+        const { argument, attachment_url } = req.body;
         const userId = req.headers['x-user-id'];
 
         const user = await getOrCreateUser(userId);
         const userIsPro = isPro(user);
+
+        const promptContext = attachment_url
+            ? `\n\n[ATTACHMENT]: ${attachment_url}\n(Please analyze the content of this link as part of the argument context)`
+            : "";
 
         const [steelManResponse, fallacyResponse] = await Promise.all([
             (async () => {
@@ -212,7 +216,7 @@ app.post('/api/analyze', async (req, res) => {
                 return openai.chat.completions.create({
                     messages: [
                         { role: "system", content: "You are 'The Steel Man', a world-class debater and philosopher. Your goal is to represent the opposing view of the user's argument with maximum charity, intellectual rigor, and nuance. \n\nRULES:\n- Do NOT straw man the user. Interpret their argument in its strongest possible form.\n- Do NOT simply summarize. Argue FOR the opposing side.\n- Your tone should be respectful but formidable. You are a worthy adversary.\n- Keep it concise but potent (under 400 words)." },
-                        { role: "user", content: `Here is my argument:\n"${argument}"\n\nGive me your strongest counter-argument.` }
+                        { role: "user", content: `Here is my argument:\n"${argument}"${promptContext}\n\nGive me your strongest counter-argument.` }
                     ],
                     model: "sonar-pro",
                 });
@@ -222,7 +226,7 @@ app.post('/api/analyze', async (req, res) => {
                 return openai.chat.completions.create({
                     messages: [
                         { role: "system", content: "You are a Logic Referee. Analyze the user's text for logical errors effectively. Return ONLY a valid JSON object with two keys: 'score' (0-100 integer representing logical strength) and 'fallacies' (an array of objects with 'type', 'quote', and 'explanation').\n\nExample JSON:\n{\n  \"score\": 65,\n  \"fallacies\": [\n    { \"type\": \"Ad Hominem\", \"quote\": \"because you're stupid\", \"explanation\": \"Attacking the person instead of the argument.\" }\n  ]\n}\n\nIf no fallacies are found, return empty array." },
-                        { role: "user", content: `Analyze the logic of this argument:\n"${argument}"` }
+                        { role: "user", content: `Analyze the logic of this argument:\n"${argument}"${promptContext}` }
                     ],
                     model: "sonar-pro",
                 });
