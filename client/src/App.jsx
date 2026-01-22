@@ -3,6 +3,8 @@ import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import History from './History';
 import ShareView from './ShareView';
 import Account from './Account';
+import { storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { API_URL } from './config';
 
 function Arena({ userId }) {
@@ -50,8 +52,6 @@ function Arena({ userId }) {
 
     try {
       if (file) {
-        const { storage } = await import('./firebase');
-        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
         const storageRef = ref(storage, `uploads/${userId}/${file.name}-${Date.now()}`);
         await uploadBytes(storageRef, file);
         attachmentUrl = await getDownloadURL(storageRef);
