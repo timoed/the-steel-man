@@ -16,7 +16,8 @@ const app = express();
 const port = process.env.PORT || 3000; // Replit prefers 3000
 
 // Middleware
-app.use(cors());
+// Middleware
+app.use(cors({ origin: '*' })); // Allow ALL origins (Fixes CORS issue for Vercel + Localhost)
 app.use(express.json());
 
 // Health Check (Critical for Replit to know we are alive)
