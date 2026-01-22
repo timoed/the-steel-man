@@ -369,9 +369,12 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Internal Server Error" });
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-    console.log(`CORS enabled for ALL origins (*)`);
-});
+// Conditionally Listen (Only if run directly, not if imported by Vercel)
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+        console.log(`CORS enabled for ALL origins (*)`);
+    });
+}
 
 module.exports = app;

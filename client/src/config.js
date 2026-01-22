@@ -1,5 +1,4 @@
-// In any environment (Product or Dev), we want to use the Explicit URL if provided.
-// If explicitly provided (Vercel Env Var), use it.
-// Otherwise, fallback to localhost:3000 (standard local dev).
+// In Production (Vercel Monorepo), API is on same domain, so use relative path.
+// In Development, we use localhost:3000.
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3000';
