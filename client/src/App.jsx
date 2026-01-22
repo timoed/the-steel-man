@@ -335,10 +335,15 @@ function App() {
             </h1>
             <nav className="nav">
               <Link to="/history" className="nav-link text-muted px-2 small font-monospace">HISTORY</Link>
+
+              {/* Show Profile for everyone except on Login page */}
+              {userId && location.pathname !== '/login' && (
+                <Link to="/account" className="nav-link text-dark px-2 small font-monospace fw-bold">PROFILE</Link>
+              )}
+
               {userId && !isGuest && location.pathname !== '/login' ? (
                 <>
                   {!isPro && <button onClick={handleUpgrade} className="nav-link text-primary fw-bold px-2 small font-monospace bg-transparent border-0">UPGRADE</button>}
-                  <Link to="/account" className="nav-link text-dark px-2 small font-monospace fw-bold">PROFILE</Link>
                   <button onClick={handleLogout} className="nav-link text-muted px-2 small font-monospace bg-transparent border-0">LOGOUT</button>
                 </>
               ) : (
@@ -353,7 +358,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Arena userId={userId} />} />
           <Route path="/history" element={<History onViewDebate={(debate) => navigate('/', { state: { debate } })} userId={userId} isPro={isPro} onUpgrade={handleUpgrade} />} />
-          <Route path="/account" element={<Account userId={userId} isPro={isPro} onLogout={handleLogout} onUpgrade={handleUpgrade} />} />
+          <Route path="/account" element={<Account userId={userId} isPro={isPro} isGuest={isGuest} onLogout={handleLogout} onUpgrade={handleUpgrade} />} />
           <Route path="/share/:id" element={<ShareView />} />
           <Route path="/login" element={<Login />} />
         </Routes>

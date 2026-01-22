@@ -4,7 +4,7 @@ import { auth, storage } from './firebase'; // Ensure storage is exported from f
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { API_URL } from './config';
 
-function Account({ userId, isPro, onLogout, onUpgrade }) {
+function Account({ userId, isPro, isGuest, onLogout, onUpgrade }) {
     const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -140,9 +140,16 @@ function Account({ userId, isPro, onLogout, onUpgrade }) {
                                         UPGRADE TO PRO
                                     </button>
                                 )}
-                                <button onClick={onLogout} className="btn btn-outline-dark py-2">
-                                    LOGOUT
-                                </button>
+
+                                {isGuest ? (
+                                    <button onClick={() => navigate('/login')} className="btn btn-outline-dark py-2">
+                                        SIGN UP TO SAVE PROGRESS
+                                    </button>
+                                ) : (
+                                    <button onClick={onLogout} className="btn btn-outline-dark py-2">
+                                        LOGOUT
+                                    </button>
+                                )}
                             </div>
 
                         </div>
