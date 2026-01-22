@@ -22,7 +22,6 @@ const corsOptions = {
     origin: '*', // Allow ALL origins (Vercel, Localhost, etc.)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'stripe-signature'],
-    credentials: true,
     optionsSuccessStatus: 200
 };
 
