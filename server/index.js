@@ -40,6 +40,17 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// Migration: Add stripe_customer_id
+const runMigrations = async () => {
+    try {
+        await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;');
+        console.log("Migration Checked: stripe_customer_id");
+    } catch (e) {
+        console.warn("Migration Warning:", e.message);
+    }
+};
+runMigrations();
+
 // OpenAI / Perplexity (Safe Init)
 let openai;
 const aiApiKey = process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY;
@@ -149,6 +160,32 @@ app.post('/api/create-checkout-session', async (req, res) => {
     }
 });
 
+// Create Portal Session
+app.post('/api/create-portal-session', async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: "Payments unavailable" });
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    try {
+        const userRes = await pool.query('SELECT stripe_customer_id FROM users WHERE id = $1', [userId]);
+        const customerId = userRes.rows[0]?.stripe_customer_id;
+
+        if (!customerId) {
+            return res.status(400).json({ error: "No billing account found. Please contact support if you believe this is an error." });
+        }
+
+        const session = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: `${req.headers.origin}/account`,
+        });
+
+        res.json({ url: session.url });
+    } catch (e) {
+        console.error("Portal Error", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Manual Verification
 app.post('/api/verify-session', async (req, res) => {
     if (!stripe) return res.status(503).json({ error: "Payments unavailable" });
@@ -190,7 +227,8 @@ app.post('/api/webhook', async (req, res) => {
         const session = event.data.object;
         const userId = session.metadata.userId;
         if (userId) {
-            await pool.query("UPDATE users SET subscription_tier = 'pro' WHERE id = $1", [userId]);
+            // Save customer ID for portal access
+            await pool.query("UPDATE users SET subscription_tier = 'pro', stripe_customer_id = $2 WHERE id = $1", [userId, session.customer]);
             console.log(`User ${userId} upgraded to PRO`);
         }
     }

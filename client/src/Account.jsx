@@ -71,6 +71,24 @@ function Account({ userId, isPro, isGuest, onLogout, onUpgrade }) {
         }
     };
 
+    const handlePortal = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/create-portal-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-user-id': userId }
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert(data.error || "Failed to open portal. (Do you have a subscription?)");
+            }
+        } catch (e) {
+            console.error("Portal Error", e);
+            alert("Failed to connect.");
+        }
+    };
+
     if (!profile) return <div className="p-5 text-center font-monospace">L O A D I N G . . .</div>;
 
     return (
@@ -135,12 +153,15 @@ function Account({ userId, isPro, isGuest, onLogout, onUpgrade }) {
 
                             {/* Actions */}
                             <div className="d-grid gap-3">
-                                {!isPro && (
+                                {!isPro ? (
                                     <button onClick={onUpgrade} className="btn btn-primary py-3">
                                         UPGRADE TO PRO
                                     </button>
+                                ) : (
+                                    <button onClick={handlePortal} className="btn btn-outline-dark py-3">
+                                        MANAGE SUBSCRIPTION
+                                    </button>
                                 )}
-
                                 {isGuest ? (
                                     <button onClick={() => navigate('/login?mode=signup')} className="btn btn-outline-dark py-2">
                                         SIGN UP TO SAVE PROGRESS
