@@ -330,7 +330,7 @@ function App() {
       <header className="border-bottom border-dark py-4 bg-white sticky-top">
         <div className="container">
           <div className="d-flex justify-content-between align-items-center">
-            <h1 className="h3 mb-0 font-serif cursor-pointer" onClick={() => navigate('/')}>
+            <h1 className="h3 mb-0 font-serif" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
               The Steel Man <span className="text-danger"></span>
             </h1>
             <nav className="nav">
