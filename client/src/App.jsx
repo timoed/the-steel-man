@@ -176,8 +176,8 @@ function Arena({ userId }) {
 
           {/* Unified Scorecard */}
           <div className="card mb-5 shadow-hard">
-            <div className="card-header bg-white py-3 border-bottom border-dark d-flex justify-content-between align-items-center">
-              <div className="small fw-bold text-muted text-uppercase">Detected Fallacies</div>
+            <div className="card-header bg-white py-3 border-bottom border-dark d-flex flex-column flex-md-row justify-content-between align-items-center">
+              <div className="small fw-bold text-muted text-uppercase mb-2 mb-md-0">Detected Fallacies</div>
               <div className="d-flex align-items-center">
                 <span className="small text-muted text-uppercase me-3">Logic Score:</span>
                 <span className={`fs-3 fw-bold font-monospace ${result.score > 80 ? 'text-success' : result.score > 50 ? 'text-warning' : 'text-danger'}`}>
